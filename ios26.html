@@ -1,0 +1,227 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" type="image/jpeg" href="logo.jpg" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>iOS 26 — HTML/CSS/JS Clone (Prototype)</title>
+  <style>
+    /* --- Reset & base --- */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:#0b1220;font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;}
+    :root{
+      --screen-w:420px; --screen-h:920px;
+      --bg:#0b1220; --glass: rgba(255,255,255,0.06);
+      --accent: linear-gradient(135deg,#5ee7df,#b490ff);
+      --text: #e9eef8;
+      --muted: rgba(233,238,248,0.6);
+      --icon-size:70px; --icon-radius:18px;
+    }/* --- Device frame (centered) --- */
+.device-wrap{width:var(--screen-w);height:var(--screen-h);margin:28px auto;border-radius:44px;box-shadow:0 20px 50px rgba(3,7,18,.8), inset 0 1px 0 rgba(255,255,255,0.02);overflow:hidden;position:relative;background:linear-gradient(180deg,#071026 0%, #0b1227 60%);}
+
+/* wallpaper layer */
+.wallpaper{position:absolute;inset:0;background-image:radial-gradient( circle at 20% 10%, rgba(90,60,160,0.18), transparent 6%), radial-gradient(circle at 85% 85%, rgba(0,160,160,0.08), transparent 8%), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="100%" height="100%" fill="%23030b1a"/></svg>');background-size:cover;filter:brightness(.95);}
+.wallpaper::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(4,8,16,0.12), rgba(2,4,8,0.35));}
+
+/* status bar */
+.statusbar{position:absolute;top:12px;left:18px;right:18px;height:22px;color:var(--text);display:flex;align-items:center;justify-content:space-between;font-size:12px}
+.statusbar .left{display:flex;gap:8px;align-items:center}
+.statusbar .right{display:flex;gap:10px;align-items:center}
+
+/* lockscreen */
+.lock-screen{position:absolute;inset:84px 18px 140px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;color:var(--text);text-align:center}
+.time{font-size:72px;font-weight:600;letter-spacing:-2px;margin-top:24px}
+.date{margin-top:6px;color:var(--muted);font-size:16px}
+
+/* home screen container */
+.home{position:absolute;inset:84px 14px 120px;padding:18px;display:grid;grid-template-rows:1fr auto;}
+.app-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-content:start;padding-top:12px}
+
+/* icon style */
+.icon{width:var(--icon-size);height:var(--icon-size);border-radius:var(--icon-radius);backdrop-filter:blur(10px);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text);font-size:12px;text-decoration:none;cursor:pointer;transition:transform .14s cubic-bezier(.2,.9,.3,1), box-shadow .14s;box-shadow:0 6px 18px rgba(3,7,18,0.5);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));}
+.icon .glyph{width:46px;height:46px;border-radius:11px;background:var(--glass);display:flex;align-items:center;justify-content:center;font-size:22px}
+.icon .label{margin-top:8px;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center}
+.icon:active{transform:scale(.96)}
+
+/* dock */
+.dock{position:relative;margin-top:8px;height:88px;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));border-radius:18px;padding:10px 18px;display:flex;gap:14px;align-items:center;justify-content:center;backdrop-filter:blur(10px)}
+
+/* control center */
+.control-center{position:absolute;right:14px;top:84px;width:310px;height:410px;border-radius:22px;background:linear-gradient(180deg, rgba(6,9,14,.7), rgba(8,12,18,.55));backdrop-filter:blur(12px);padding:14px;transform:translateY(-18px) scale(.96);opacity:0;pointer-events:none;transition:all .22s ease}
+.control-center.visible{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+.cc-row{display:flex;gap:12px;margin-bottom:12px}
+.cc-card{flex:1;border-radius:12px;padding:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter:blur(8px);}
+
+/* notifications */
+.notif-panel{position:absolute;left:14px;top:84px;right:14px;max-height:48vh;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.notif{background:rgba(255,255,255,0.03);padding:10px;border-radius:12px;color:var(--text);backdrop-filter:blur(6px)}
+
+/* small helpers */
+.hidden{display:none}
+
+/* responsiveness for smaller screens */
+@media (max-width:460px){:root{--screen-w:360px;--screen-h:800px;--icon-size:64px}}
+
+/* simple app window */
+.app-window{position:absolute;inset:110px 12px 110px;background:linear-gradient(180deg,#0b1226,#071022);border-radius:20px;padding:14px;color:var(--text);transform:translateY(20px) scale(.98);opacity:0;pointer-events:none;transition:all .22s ease}
+.app-window.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+.app-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+
+/* tiny bounce animation for icons */
+@keyframes pulse{0%{transform:translateY(0)}50%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+.icon.bouncy{animation:pulse 3s infinite ease-in-out}
+
+  </style>
+</head>
+<body>
+  <div class="device-wrap" id="device">
+    <div class="wallpaper"></div><div class="statusbar">
+  <div class="left"><span id="carrier">Jio</span></div>
+  <div class="right"><span id="battery">100%</span></div>
+</div>
+
+<!-- Lock screen -->
+<div class="lock-screen" id="lockScreen">
+  <div class="time" id="clock">12:41</div>
+  <div class="date" id="date">Friday, November 15</div>
+</div>
+
+<!-- Notifications (swipe down left) -->
+<div class="notif-panel hidden" id="notifPanel">
+  <div class="notif">Messages from Abhishek: "Check the repo"</div>
+  <div class="notif">System: Backup completed</div>
+  <div class="notif">Calendar: Meeting at 3:30 PM</div>
+</div>
+
+<!-- Home screen -->
+<div class="home hidden" id="home">
+  <div>
+    <div class="app-grid" id="appGrid">
+      <!-- icons injected by JS -->
+    </div>
+  </div>
+  <div class="dock" id="dock">
+    <!-- dock icons injected by JS -->
+  </div>
+</div>
+
+<!-- Control Center -->
+<div class="control-center" id="controlCenter">
+  <div class="cc-row">
+    <div class="cc-card">Wi‑Fi<br><small class="muted">HomeNetwork</small></div>
+    <div class="cc-card">Bluetooth<br><small class="muted">On</small></div>
+  </div>
+
+  <div class="cc-row">
+    <div class="cc-card">Brightness</div>
+  </div>
+
+  <div class="cc-row">
+    <div class="cc-card">Music</div>
+  </div>
+</div>
+
+<!-- App window placeholder -->
+<div class="app-window" id="appWindow">
+  <div class="app-header"><strong id="appTitle">App</strong><button id="closeApp">Close</button></div>
+  <div class="app-body">This is a sample app window. Use the home button or swipe to go back.</div>
+</div>
+
+  </div>  <script>
+    // --- Simple iOS-like prototype interactions ---
+    const lockScreen = document.getElementById('lockScreen');
+    const home = document.getElementById('home');
+    const appGrid = document.getElementById('appGrid');
+    const dock = document.getElementById('dock');
+    const controlCenter = document.getElementById('controlCenter');
+    const notifPanel = document.getElementById('notifPanel');
+    const appWindow = document.getElementById('appWindow');
+    const appTitle = document.getElementById('appTitle');
+
+    // sample apps
+    const apps = [
+      {name:'Phone', emoji:'📞'}, {name:'Messages', emoji:'💬'}, {name:'Safari', emoji:'🧭'}, {name:'Photos', emoji:'🖼️'},
+      {name:'Camera', emoji:'📸'}, {name:'Settings', emoji:'⚙️'}, {name:'Files', emoji:'📁'}, {name:'Notes', emoji:'🗒️'},
+      {name:'Music', emoji:'🎵'}, {name:'Calendar', emoji:'📅'}, {name:'Maps', emoji:'🗺️'}, {name:'Mail', emoji:'✉️'}
+    ];
+
+    // build icons
+    function makeIcon(app){
+      const a = document.createElement('a'); a.className='icon'; a.href='#';
+      const g = document.createElement('div'); g.className='glyph'; g.textContent=app.emoji;
+      const l = document.createElement('div'); l.className='label'; l.textContent=app.name;
+      a.appendChild(g); a.appendChild(l);
+      a.addEventListener('click', (e)=>{ e.preventDefault(); openApp(app); });
+      a.addEventListener('contextmenu', (e)=>{ e.preventDefault(); a.classList.toggle('bouncy'); });
+      return a;
+    }
+
+    apps.forEach(app=>appGrid.appendChild(makeIcon(app)));
+
+    // dock apps
+    ['Phone','Messages','Safari','Music'].forEach(name=>{
+      const app = apps.find(x=>x.name===name) || {name, emoji:'📱'};
+      dock.appendChild(makeIcon(app));
+    });
+
+    // clock
+    function updateClock(){
+      const d = new Date();
+      const hh = d.getHours();
+      const mm = d.getMinutes().toString().padStart(2,'0');
+      let hour = hh%12 || 12;
+      document.getElementById('clock').textContent = hour + ':' + mm;
+      document.getElementById('date').textContent = d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+      document.getElementById('battery').textContent = Math.max(30,Math.floor(90 + Math.sin(d.getMinutes()/60*2*Math.PI)*5)) + '%';
+    }
+    updateClock(); setInterval(updateClock,1000*30);
+
+    // Unlock behavior: tap lockscreen to go home
+    lockScreen.addEventListener('click', ()=>{
+      lockScreen.classList.add('hidden'); home.classList.remove('hidden');
+    });
+
+    // open app
+    function openApp(app){
+      appTitle.textContent = app.name || appTitle.textContent;
+      appWindow.classList.add('open');
+    }
+    document.getElementById('closeApp').addEventListener('click', ()=>appWindow.classList.remove('open'));
+
+    // control center toggle (swipe from right edge)
+    let startX=0, startY=0, touching=false;
+    document.getElementById('device').addEventListener('touchstart', (e)=>{
+      const t = e.touches[0]; startX = t.clientX; startY = t.clientY; touching=true;
+    }, {passive:true});
+    document.getElementById('device').addEventListener('touchmove', (e)=>{
+      if(!touching) return; const t = e.touches[0];
+      const dx = t.clientX - startX; const dy = t.clientY - startY;
+      // if swipe right-to-left near right edge => open control center
+      if(startX > (window.innerWidth*0.7) && dx < -30 && Math.abs(dy) < 80){ controlCenter.classList.add('visible'); notifPanel.classList.add('hidden'); }
+      // if swipe left-to-right near left edge => open notifications
+      if(startX < (window.innerWidth*0.3) && dx > 30 && Math.abs(dy) < 80){ notifPanel.classList.remove('hidden'); controlCenter.classList.remove('visible'); }
+    }, {passive:true});
+    document.getElementById('device').addEventListener('touchend', ()=>{ touching=false; });
+
+    // desktop mouse fallback for toggles
+    document.addEventListener('keydown', (e)=>{
+      if(e.key==='Escape'){ controlCenter.classList.remove('visible'); notifPanel.classList.add('hidden'); }
+      if(e.key==='h'){ lockScreen.classList.add('hidden'); home.classList.remove('hidden'); }
+    });
+
+    // make icons draggable on long press (basic)
+    let longPressTimer=null, dragEl=null;
+    document.addEventListener('pointerdown',(e)=>{
+      const el = e.target.closest('.icon'); if(!el) return;
+      longPressTimer = setTimeout(()=>{ el.style.transform='scale(.98)'; el.classList.add('bouncy'); dragEl = el; }, 500);
+    });
+    document.addEventListener('pointerup',()=>{ clearTimeout(longPressTimer); if(dragEl){ dragEl.classList.remove('bouncy'); dragEl.style.transform=''; dragEl=null; } });
+
+    // initial quick hint: show lockscreen for 1.2s then reveal home (if you want immediate home remove)
+    setTimeout(()=>{ /* keep lockscreen until tapped */ },1200);
+
+    // expose small API for user edits
+    window.ios26 = {openApp, apps, makeIcon};
+  </script></body>
+</html>
